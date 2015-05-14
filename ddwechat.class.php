@@ -77,6 +77,10 @@ class ddwechat{
 	*	获取微信推送来的xml数据并保存到data中
 	*/
 	public function request(){
+		if($_SERVER['REQUEST_METHOD'] != 'POST'){
+			$this->errmsg = "请求方式不对！";
+			return false;
+		}
 		$xml = file_get_contents("php://input");	
 		$xml = new SimpleXMLElement($xml);
 		

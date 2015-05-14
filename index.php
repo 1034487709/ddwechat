@@ -21,6 +21,7 @@ if(isset($_GET['echostr'])){
 
 //获取微信服务推送的xml信息,所有变量都会自动变为小写的
 $data = $dd->request();
+if(!$data)die('数据获取失败，可能是请求方式不对');
 
 if($data['msgtype'] == 'text')$dd->response(array('msgtype'=>"text", 'content'=>"你发的内容是：".$data['content']));
 else if($data['msgtype'] == 'image') $dd->response(array('msgtype'=>"text", 'content'=>"发你妹的图片"));
