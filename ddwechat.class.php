@@ -16,7 +16,7 @@ class ddwechat{
 	*	构造函数，通过数组初始化参数
 	*	@param array $param 数组格式的参数
 	*/
-	public function loxn($param){
+	public function ddwechat($param){
 		$this->__construct($param);
 	}
 	
@@ -79,14 +79,15 @@ class ddwechat{
 	public function request(){
 		$xml = file_get_contents("php://input");	
 		$xml = new SimpleXMLElement($xml);
-		if(!is_array($xml)){
+		
+		if(!is_object($xml)){
 			$this->errmsg = "xml数据接收错误";
 			return false;
 		}
 		foreach ($xml as $key => $value) {
 			$this->data[strtolower($key)] = strval($value);
 		}
-		return true;
+		return $this->data;
 	}
 	
 	/**
