@@ -6,8 +6,9 @@ class ddwechat{
 	public $appid;
 	public $appscret;
 	public $token;
-	public $access_token;
+	public $accesstoken;
 	protected $xmlStr;	//xml大小写对应配置
+	protected $http;	//http操作对象
 	public $data;	//微信服务器推送来的数据
 	public $errmsg; //错误信息
 	
@@ -155,5 +156,66 @@ class ddwechat{
 		}
 		return $newArr;
 	}
+	
+	/**
+	*	根据appid和appsecret获取accesstoken
+	*	@param string $appid 
+	*	@param string $appsecret
+	*/
+	public function getaccesstoken($appid = null, $appsecret = null){
+		$appid || $appid = $this->appid;
+		$appsecret || $appsecret = $this->appsecret;
+		$url = "https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=".$appid."&secret=".$appsecret;
+		$temp = $this->exechttp($url);
+		if($temp){
+			$this->accesstoken = $temp['access_token'];
+		}
+		return $temp;
+	}
+	
+	/**
+	*	获取微信服务器IP地址
+	*	@param string $accesstoken 可选
+	*/
+	public function getwechatip($accesstoken = null){
+		$accesstoken || $accesstoken = $this->accesstoken;
+		$url = "https://api.weixin.qq.com/cgi-bin/getcallbackip?access_token=".$accesstoken ;
+		return $this->exechttp($url);
+	}
+	
+	/**
+	*	返回http操作对象
+	*/
+	private function gethttp(){
+		if(!$this->http){
+			include "ddhttp.class.php";
+			$this->http = new ddhttp;
+		}
+		return $this->http;
+	}
+	
+	/**
+	*	执行http请求数据并分析结果，默认是get方式，如果错误则返回false，否则返回json_decode后的数组
+	*	@param string $url	要请求的数组
+	*	@param string $method 请求方式get或者post
+	*	@param mixed $data	数据
+	*/
+	private function exechttp($url, $method = 'get',$data = null){
+		$http = $this->gethttp();
+		$temp = $http->$method($url, $data);
+
+		if(!$temp){ //HTTP操作错误
+			$this->errmsg = $http->errmsg;
+			return false;
+		}
+		$tempArr = json_decode($temp, 1);
+		if(!isset($tempArr['errcode']) || $tempArr['errcode'] != '0'){
+			return $tempArr;
+		}else {
+			$this->errmsg = $tempArr['errmsg']."(代码：".$tempArr['errcode'].")";
+			return false;
+		}
+	}
+	
 }
 ?>

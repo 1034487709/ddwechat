@@ -2,14 +2,17 @@
 
 include "ddwechat.class.php";
 
+
 //初始化
 $config = array(
-	'appid' => 'yourappid',
-	'appsecret'	=> 'yoursecret',
+	'appid' => 'wxbdadf92089d8a8fe',
+	'appsecret'	=> '60703a01783f11664c718df5f568b2c5',
 	'token'	=>	'dragondean'
 );
 $dd = new ddwechat($config);
 
+var_dump($dd->getaccesstoken());
+var_dump($dd->getwechatip());
 //设置参数
 $dd->setParam('createtime',time());
 
