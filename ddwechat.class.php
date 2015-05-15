@@ -1,6 +1,8 @@
 <?php
 /**
 *	微信类，集成微信常用功能,目前只支持明文模式
+*	@author DragonDean
+*	@url	http://www.dragondean.cn
 */
 class ddwechat{
 	public $appid;
@@ -46,7 +48,7 @@ class ddwechat{
 	}
 	
 	/**
-	*	判断消息的真实性
+	*	API接口验证
 	*/
 	public function validate(){
 		if($this->checkSignature() && isset($_GET['echostr'])){
@@ -56,6 +58,7 @@ class ddwechat{
 	
 	/**
 	*	检查签名
+	*	@return bool 
 	*/
 	private function checkSignature(){
 		$signature = $_GET["signature"];
@@ -112,11 +115,14 @@ class ddwechat{
 	*	@param array $data	要转换的数组
 	*	@param bool $root 	是否要根节点
 	*	@return string 		xml字符串
+	*	@link http://www.cnblogs.com/dragondean/p/php-array2xml.html
 	*/
-	private function arr2xml($data, $root = true){
+	private arr2xml($data, $root = true){
 		$str="";
 		if($root)$str .= "<xml>";
 		foreach($data as $key => $val){
+			//去掉key中的下标[]
+			$key = preg_replace('/\[\d*\]/', '', $key);
 			if(is_array($val)){
 				$child = $this->arr2xml($val, false);
 				$str .= "<$key>$child</$key>";
@@ -184,7 +190,53 @@ class ddwechat{
 	}
 	
 	/**
-	*	返回http操作对象
+	*	添加/修改/删除客服账号,每个公众号最多添加10个客服账号
+	*	@param  string $kfaccount 客服账号
+	*	@param  string $nickname	客服昵称,最长6个汉字或12个英文字符
+	*	@param  string $password	密码
+	*	@param  string $action 		操作，默认是添加(add)，可选修改(update)或者删除(del)
+	*	@param  string $accesstoken	可选参数
+	*/
+	public function kfaccount($kfaccount, $nickname, $password, $action = 'add' , $accesstoken = null){
+		$accesstoken || $accesstoken = $this->accesstoken;
+		$data = array( 'kf_account' => $kfaccount, 'nickname' => $nickname, 'password' => $password );
+		$data = json_encode($data);
+		$url = "https://api.weixin.qq.com/customservice/kfaccount/$action?access_token=".$accesstoken;
+		return $this->exechttp($url, 'post', $data);
+	}
+	
+	/**
+	*	设置客服头像
+	*/
+	public function uploadkfhead(){
+		//TODO
+		return false;
+	}
+	
+	/**
+	*	获取所有客服账号
+	*	@param string $accesstoken 可选参数
+	*/
+	public function getkflist($accesstoken = null){
+		$accesstoken || $accesstoken = $this->accesstoken;
+		$url = "https://api.weixin.qq.com/cgi-bin/customservice/getkflist?access_token=".$accesstoken;
+		return $this->exechttp($url);
+	}
+	
+	/**
+	*	发送客服消息
+	*	@param array $msg 消息体数组
+	*	@param string $accesstoken  可选参数
+	*/
+	public function custommsg($msg, $accesstoken = null){
+		$accesstoken || $accesstoken = $this->accesstoken;
+		$url = "https://api.weixin.qq.com/cgi-bin/message/custom/send?access_token=".$accesstoken;
+		return $this->exechttp($url, 'post', json_encode($data));
+	}
+	
+	
+	/**
+	*	返回http操作对象，避免多次include和new
 	*/
 	private function gethttp(){
 		if(!$this->http){
@@ -201,6 +253,7 @@ class ddwechat{
 	*	@param mixed $data	数据
 	*/
 	private function exechttp($url, $method = 'get',$data = null){
+		$method = strtolower($method);
 		$http = $this->gethttp();
 		$temp = $http->$method($url, $data);
 
