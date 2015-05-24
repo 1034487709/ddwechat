@@ -1,4 +1,5 @@
 <?php
+defined('DDVMS') or die("no hack");
 /**
 *	微信类，集成微信常用功能,目前只支持明文模式
 *	@author DragonDean
@@ -117,7 +118,7 @@ class ddwechat{
 	*	@return string 		xml字符串
 	*	@link http://www.cnblogs.com/dragondean/p/php-array2xml.html
 	*/
-	private arr2xml($data, $root = true){
+	private function arr2xml($data, $root = true){
 		$str="";
 		if($root)$str .= "<xml>";
 		foreach($data as $key => $val){
@@ -173,7 +174,7 @@ class ddwechat{
 		$appsecret || $appsecret = $this->appsecret;
 		$url = "https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=".$appid."&secret=".$appsecret;
 		$temp = $this->exechttp($url);
-		if($temp){
+		if($temp && !isset($temp['errcode'])){
 			$this->accesstoken = $temp['access_token'];
 		}
 		return $temp;
@@ -234,11 +235,135 @@ class ddwechat{
 		return $this->exechttp($url, 'post', json_encode($data));
 	}
 	
+	/**
+	*	创建分组
+	*	一个公众账号，最多支持创建100个分组。
+	*	@param string $name 分组名
+	*	@param string $accesstoken 凭证，可选参数
+	*/
+	public function addgroup($name, $accesstoken = null){
+		$accesstoken || $accesstoken = $this->accesstoken;
+		$url = "https://api.weixin.qq.com/cgi-bin/groups/create?access_token=" . $accesstoken;
+		$data = array( 'group' => array( 'name' => $name ));
+		return $this->exechttp($url , 'post', json_encode($data));
+	}
+	
+	/**
+	*	查询所有分组
+	*	@param string $accesstoken 可选参数
+	*/
+	public function listgroup($accesstoken = null){
+		$accesstoken || $accesstoken = $this->accesstoken;
+		$url = "https://api.weixin.qq.com/cgi-bin/groups/get?access_token=" . $accesstoken;
+		return $this->exechttp($url);
+	}
+	
+	/**
+	*	查询用户所在分组
+	*	@param string $openid 用户的openid
+	*	@param string $accesstoken 可选参数 
+	*/
+	public function getusergroupid($openid , $accesstoken = null){
+		$accesstoken || $accesstoken = $this->accesstoken;
+		$url = "https://api.weixin.qq.com/cgi-bin/groups/getid?access_token=" . $accesstoken;
+		$data = array( 'openid' => $openid );
+		return $this->exechttp($url, 'post', json_encode($data));
+	}
+	
+	/**
+	*	修改分组名
+	*	@param int $groupid 分组id，由微信分配
+	*	@param string $name 分组名，30个字符以内
+	*	@param string $accesstoken 可选参数
+	*/
+	public function updategroup($groupid, $name, $accesstoken = null){
+		$accesstoken || $accesstoken = $this->accesstoken;
+		$url = "https://api.weixin.qq.com/cgi-bin/groups/update?access_token=" . $accesstoken;
+		$data = array( 'group' => array( 'id' => $groupid, 'name' => $name ));
+		return $this->exechttp($url , 'post', json_encode($data));		
+	}
+	
+	/**
+	*	移动用户分组
+	*	@param string $openid 用户的openid
+	*	@param int $togroupid 目标分组id
+	*	@param string $accesstoken
+	*/
+	public function movetogroup($openid, $togroupid, $accesstoken = null){
+		$accesstoken || $accesstoken = $this->accesstoken;
+		$url = "https://api.weixin.qq.com/cgi-bin/groups/members/update?access_token=" . $accesstoken;
+		$data = array('openid'=>$openid , 'to_groupid'=>$togroupid);
+		return $this->exechttp($url , 'post', json_encode($data));
+	}
+	
+	/**
+	*	批量移动用户分组
+	*	@param array $openidlist 要移动的用户openid数组
+	*	@param int $togroupid 目标分组id
+	*	@param string $accesstoken 可选参数
+	*/
+	public function movetogroupbatch($openidlist, $togroupid,  $accesstoken = null){
+		$accesstoken || $accesstoken = $this->accesstoken;
+		$url = "https://api.weixin.qq.com/cgi-bin/groups/members/batchupdate?access_token=" . $accesstoken;
+		$data = array('openid_list'=>$openidlist, 'to_groupid'=>$togroupid);
+		return $this->exechttp($url , 'post', json_encode($data));
+	}
+	
+	/**
+	*	删除分组
+	*	删除分组后，所有该分组内的用户自动进入默认分组
+	*	@param int $groupid 要删除的分组id
+	*	@param string $accesstoken 可选参数
+	*/
+	public function delgroup($groupid, $accesstoken = null){
+		$accesstoken || $accesstoken = $this->accesstoken;
+		$url = "https://api.weixin.qq.com/cgi-bin/groups/delete?access_token=" . $accesstoken;
+		$data = array( 'group' => array( 'id' => $groupid));
+		return $this->exechttp($url , 'post', json_encode($data));
+	}
+	
+	/**
+	*	设置备注名
+	*	@param string $openid 
+	*	@param string $remark 备注名，少于30个字符
+	*	@param string $accesstoken 可选参数
+	*/
+	public function updateremark($openid , $remark, $accesstoken = null){
+		$accesstoken || $accesstoken = $this->accesstoken;
+		$url = "https://api.weixin.qq.com/cgi-bin/user/info/updateremark?access_token=" . $accesstoken;
+		$data = array( 'openid' => $openid, 'remark' => $remark);
+		return $this->exechttp($url , 'post', json_encode($data));
+	}
+	
+	/**
+	*	获取用户基本信息（包括UnionID机制）
+	*	@param string $openid
+	*	@param string $accesstoken
+	*/
+	public function getuserinfo($openid, $accesstoken = null){
+		$accesstoken || $accesstoken = $this->accesstoken;
+		$url = "https://api.weixin.qq.com/cgi-bin/user/info?access_token=".$accesstoken."&openid=".$openid."&lang=zh_CN";
+		return $this->exechttp($url);
+	}
+	
+	
+	/**
+	*	获取用户列表
+	*	@param string $nextopenid 第一个拉取的openid
+	*	@param string $accesstoken
+	*/
+	public function getuserlist($nextopenid = null , $accesstoken = null){
+		$accesstoken || $accesstoken = $this->accesstoken;
+		$url = "https://api.weixin.qq.com/cgi-bin/user/get?access_token=" .$accesstoken. "&next_openid=".$nextopenid;
+		return $this->exechttp($url);
+	}
+	
+	
 	
 	/**
 	*	返回http操作对象，避免多次include和new
 	*/
-	private function gethttp(){
+	public function gethttp(){
 		if(!$this->http){
 			include "ddhttp.class.php";
 			$this->http = new ddhttp;
@@ -251,8 +376,9 @@ class ddwechat{
 	*	@param string $url	要请求的数组
 	*	@param string $method 请求方式get或者post
 	*	@param mixed $data	数据
+	*	@param bool $orig 是否原样返回数据
 	*/
-	private function exechttp($url, $method = 'get',$data = null){
+	public function exechttp($url, $method = 'get',$data = null , $orig = false){
 		$method = strtolower($method);
 		$http = $this->gethttp();
 		$temp = $http->$method($url, $data);
@@ -261,6 +387,7 @@ class ddwechat{
 			$this->errmsg = $http->errmsg;
 			return false;
 		}
+		if($orig)return $temp;//原样返回数据
 		$tempArr = json_decode($temp, 1);
 		if(!isset($tempArr['errcode']) || $tempArr['errcode'] != '0'){
 			return $tempArr;
