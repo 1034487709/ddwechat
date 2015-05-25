@@ -1,5 +1,4 @@
 <?php
-defined('DDVMS') or die("no hack");
 /**
 *	微信类，集成微信常用功能,目前只支持明文模式
 *	@author DragonDean
@@ -201,7 +200,7 @@ class ddwechat{
 	public function kfaccount($kfaccount, $nickname, $password, $action = 'add' , $accesstoken = null){
 		$accesstoken || $accesstoken = $this->accesstoken;
 		$data = array( 'kf_account' => $kfaccount, 'nickname' => $nickname, 'password' => $password );
-		$data = json_encode($data);
+		$data = $this->jsonencode($data);
 		$url = "https://api.weixin.qq.com/customservice/kfaccount/$action?access_token=".$accesstoken;
 		return $this->exechttp($url, 'post', $data);
 	}
@@ -232,7 +231,7 @@ class ddwechat{
 	public function custommsg($msg, $accesstoken = null){
 		$accesstoken || $accesstoken = $this->accesstoken;
 		$url = "https://api.weixin.qq.com/cgi-bin/message/custom/send?access_token=".$accesstoken;
-		return $this->exechttp($url, 'post', json_encode($data));
+		return $this->exechttp($url, 'post', $this->jsonencode($msg));
 	}
 	
 	/**
@@ -245,7 +244,7 @@ class ddwechat{
 		$accesstoken || $accesstoken = $this->accesstoken;
 		$url = "https://api.weixin.qq.com/cgi-bin/groups/create?access_token=" . $accesstoken;
 		$data = array( 'group' => array( 'name' => $name ));
-		return $this->exechttp($url , 'post', json_encode($data));
+		return $this->exechttp($url , 'post', $this->jsonencode($data));
 	}
 	
 	/**
@@ -267,7 +266,7 @@ class ddwechat{
 		$accesstoken || $accesstoken = $this->accesstoken;
 		$url = "https://api.weixin.qq.com/cgi-bin/groups/getid?access_token=" . $accesstoken;
 		$data = array( 'openid' => $openid );
-		return $this->exechttp($url, 'post', json_encode($data));
+		return $this->exechttp($url, 'post', $this->jsonencode($data));
 	}
 	
 	/**
@@ -280,7 +279,7 @@ class ddwechat{
 		$accesstoken || $accesstoken = $this->accesstoken;
 		$url = "https://api.weixin.qq.com/cgi-bin/groups/update?access_token=" . $accesstoken;
 		$data = array( 'group' => array( 'id' => $groupid, 'name' => $name ));
-		return $this->exechttp($url , 'post', json_encode($data));		
+		return $this->exechttp($url , 'post', $this->jsonencode($data));		
 	}
 	
 	/**
@@ -293,7 +292,7 @@ class ddwechat{
 		$accesstoken || $accesstoken = $this->accesstoken;
 		$url = "https://api.weixin.qq.com/cgi-bin/groups/members/update?access_token=" . $accesstoken;
 		$data = array('openid'=>$openid , 'to_groupid'=>$togroupid);
-		return $this->exechttp($url , 'post', json_encode($data));
+		return $this->exechttp($url , 'post', $this->jsonencode($data));
 	}
 	
 	/**
@@ -306,7 +305,7 @@ class ddwechat{
 		$accesstoken || $accesstoken = $this->accesstoken;
 		$url = "https://api.weixin.qq.com/cgi-bin/groups/members/batchupdate?access_token=" . $accesstoken;
 		$data = array('openid_list'=>$openidlist, 'to_groupid'=>$togroupid);
-		return $this->exechttp($url , 'post', json_encode($data));
+		return $this->exechttp($url , 'post', $this->jsonencode($data));
 	}
 	
 	/**
@@ -319,7 +318,7 @@ class ddwechat{
 		$accesstoken || $accesstoken = $this->accesstoken;
 		$url = "https://api.weixin.qq.com/cgi-bin/groups/delete?access_token=" . $accesstoken;
 		$data = array( 'group' => array( 'id' => $groupid));
-		return $this->exechttp($url , 'post', json_encode($data));
+		return $this->exechttp($url , 'post', $this->jsonencode($data));
 	}
 	
 	/**
@@ -332,7 +331,7 @@ class ddwechat{
 		$accesstoken || $accesstoken = $this->accesstoken;
 		$url = "https://api.weixin.qq.com/cgi-bin/user/info/updateremark?access_token=" . $accesstoken;
 		$data = array( 'openid' => $openid, 'remark' => $remark);
-		return $this->exechttp($url , 'post', json_encode($data));
+		return $this->exechttp($url , 'post', $this->jsonencode($data));
 	}
 	
 	/**
@@ -395,6 +394,14 @@ class ddwechat{
 			$this->errmsg = $tempArr['errmsg']."(代码：".$tempArr['errcode'].")";
 			return false;
 		}
+	}
+	
+	/**
+	*	json_encode写法改进
+	*	@param mixed $var 要encode的变量
+	*/
+	public function jsonencode($var){
+		return json_encode($var, JSON_UNESCAPED_UNICODE);
 	}
 	
 }
