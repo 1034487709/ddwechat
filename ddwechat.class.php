@@ -1,4 +1,5 @@
 <?php
+defined('DDVMS') or die("no hack");
 /**
 *	微信类，集成微信常用功能,目前只支持明文模式
 *	@author DragonDean
@@ -86,17 +87,10 @@ class ddwechat{
 			return false;
 		}
 		$xml = file_get_contents("php://input");	
-		$xml = new SimpleXMLElement($xml);
-		
-		if(!is_object($xml)){
-			$this->errmsg = "xml数据接收错误";
-			return false;
-		}
-		foreach ($xml as $key => $value) {
-			$this->data[strtolower($key)] = strval($value);
-		}
+		$this->data = $this->xml2arr($xml);
 		return $this->data;
 	}
+
 	
 	/**
 	*	回复被动消息
@@ -108,59 +102,6 @@ class ddwechat{
 		empty($msg['fromusername']) && $msg['fromusername'] = $this->data['tousername'];
 		empty($msg['createtime']) && $msg['createtime'] = time();
 		echo $this->arr2xml($this->walkxmlvar($msg));
-	}
-	
-	/**
-	*	将数组转换为xml
-	*	@param array $data	要转换的数组
-	*	@param bool $root 	是否要根节点
-	*	@return string 		xml字符串
-	*	@link http://www.cnblogs.com/dragondean/p/php-array2xml.html
-	*/
-	private function arr2xml($data, $root = true){
-		$str="";
-		if($root)$str .= "<xml>";
-		foreach($data as $key => $val){
-			//去掉key中的下标[]
-			$key = preg_replace('/\[\d*\]/', '', $key);
-			if(is_array($val)){
-				$child = $this->arr2xml($val, false);
-				$str .= "<$key>$child</$key>";
-			}else{
-				$str.= "<$key><![CDATA[$val]]></$key>";
-			}
-		}
-		if($root)$str .= "</xml>";
-		return $str;
-	}
-	
-	/**
-	*	根据xmlStr.config.php的配置，将小写变量转为微信服务要求的首字母大写
-	*	@param string $str	要转换的字符串
-	*	@return string $rt	转换后的字符串，没有原样返回
-	*/	
-	private function getxmlvar($str){
-		if(!is_array($this->xmlStr))$this->xmlStr = require "xmlStr.config.php";
-		if( !empty($this->xmlStr[$str]))return $this->xmlStr[$str];
-		else return $str;
-	}
-	
-	/**
-	*	递归将数组中的小写变量转为微信需要的首字母大写格式
-	*	@param array 要转换的数组
-	*	@return array 转换后的数组
-	*/
-	private function walkxmlvar($arr){
-		if(!is_array($arr))return array();
-		$newArr = array();
-		foreach($arr as $key => $val){
-			if(is_array($val)){
-				$newArr[$this->getxmlvar($key)] = $this->walkxmlvar($val);
-			}else {
-				$newArr[$this->getxmlvar($key)] = $val;
-			}
-		}
-		return $newArr;
 	}
 	
 	/**
@@ -357,7 +298,110 @@ class ddwechat{
 		return $this->exechttp($url);
 	}
 	
+	/**
+	*	发放红包接口 // TODO 
+	*	红包接口要求使用ssl和证书，所以还需要完善post方法才能使用
+	*	@param array $param 红包数据数组
+	*/
+	public function redpack($param, $ssl){
+		$url = "https://api.mch.weixin.qq.com/mmpaymkttransfers/sendredpack";
+		$xml = $this->arr2xml($param);
+		$rt = $this->exechttp($url, 'post', $xml, true, $ssl);
+		return $this->xml2arr($rt);
+	}
 	
+	/**
+	*	根据参数生成签名
+	*	@param array $param 要参与签名的参数
+	*	@param string $key 参与签名的支付密钥
+	*	@return string  签名字符串
+	*/
+	public function getsign($param, $key){
+		print_r($param);
+		echo "\r\n\r\n";
+		foreach ($param as $k => $v){
+			$parameters[$k] = $v;
+		}
+		//签名步骤一：按字典序排序参数
+		ksort($parameters);
+		$string =  urldecode(http_build_query($parameters));//$this->formatBizQueryParaMap($Parameters, false);
+		//签名步骤二：在string后加入KEY
+		$string = $string."&key=".$key;//<<<<<<<<<<<<=======
+		//签名步骤三：MD5加密
+		echo $string;
+		$string = md5($string);
+		//签名步骤四：所有字符转为大写
+		$result = strtoupper($string);
+		return $result;
+	}
+	
+	/**
+	* 产生随机字符串，不长于32位
+	* @param int $length
+	* @return 产生的随机字符串
+	*/
+	public static function getnoncestr($length = 32) 
+	{
+		$chars = "abcdefghijklmnopqrstuvwxyz0123456789";  
+		$str ="";
+		for ( $i = 0; $i < $length; $i++ )  {  
+			$str .= substr($chars, mt_rand(0, strlen($chars)-1), 1);  
+		} 
+		return $str;
+	}
+	
+	/**
+	*	将数组转换为xml
+	*	@param array $data	要转换的数组
+	*	@param bool $root 	是否要根节点
+	*	@return string 		xml字符串
+	*	@link http://www.cnblogs.com/dragondean/p/php-array2xml.html
+	*/
+	private function arr2xml($data, $root = true){
+		$str="";
+		if($root)$str .= "<xml>";
+		foreach($data as $key => $val){
+			//去掉key中的下标[]
+			$key = preg_replace('/\[\d*\]/', '', $key);
+			if(is_array($val)){
+				$child = $this->arr2xml($val, false);
+				$str .= "<$key>$child</$key>";
+			}else{
+				$str.= "<$key><![CDATA[$val]]></$key>";
+			}
+		}
+		if($root)$str .= "</xml>";
+		return $str;
+	}
+	
+	/**
+	*	根据xmlStr.config.php的配置，将小写变量转为微信服务要求的首字母大写
+	*	@param string $str	要转换的字符串
+	*	@return string $rt	转换后的字符串，没有原样返回
+	*/	
+	private function getxmlvar($str){
+		if(!is_array($this->xmlStr))$this->xmlStr = require "xmlStr.config.php";
+		if( !empty($this->xmlStr[$str]))return $this->xmlStr[$str];
+		else return $str;
+	}
+	
+	/**
+	*	递归将数组中的小写变量转为微信需要的首字母大写格式
+	*	@param array 要转换的数组
+	*	@return array 转换后的数组
+	*/
+	private function walkxmlvar($arr){
+		if(!is_array($arr))return array();
+		$newArr = array();
+		foreach($arr as $key => $val){
+			if(is_array($val)){
+				$newArr[$this->getxmlvar($key)] = $this->walkxmlvar($val);
+			}else {
+				$newArr[$this->getxmlvar($key)] = $val;
+			}
+		}
+		return $newArr;
+	}
 	
 	/**
 	*	返回http操作对象，避免多次include和new
@@ -377,9 +421,13 @@ class ddwechat{
 	*	@param mixed $data	数据
 	*	@param bool $orig 是否原样返回数据
 	*/
-	public function exechttp($url, $method = 'get',$data = null , $orig = false){
+	public function exechttp($url, $method = 'get',$data = null , $orig = false, $ssl = null){
 		$method = strtolower($method);
 		$http = $this->gethttp();
+		
+		if(isset($ssl['sslkey'])) $http->sslkey = $ssl['sslkey'];
+		if(isset($ssl['sslcert'])) $http->sslcert = $ssl['sslcert'];
+		
 		$temp = $http->$method($url, $data);
 
 		if(!$temp){ //HTTP操作错误
@@ -394,6 +442,25 @@ class ddwechat{
 			$this->errmsg = $tempArr['errmsg']."(代码：".$tempArr['errcode'].")";
 			return false;
 		}
+	}
+	
+	
+	/**
+	*	xml转为数组
+	*	@param string $xml 原始的xml字符串
+	*/
+	public function xml2arr($xml){
+		$xml = new SimpleXMLElement($xml);
+		
+		if(!is_object($xml)){
+			$this->errmsg = "xml数据接收错误";
+			return false;
+		}
+		$arr = array();
+		foreach ($xml as $key => $value) {
+			$arr[strtolower($key)] = strval($value);
+		}
+		return $arr;
 	}
 	
 	/**
